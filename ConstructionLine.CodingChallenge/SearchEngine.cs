@@ -7,6 +7,9 @@ namespace ConstructionLine.CodingChallenge
     {
         private readonly Dictionary<System.Guid, Dictionary<System.Guid, List<Shirt>>> _hashedShirts;
 
+        Dictionary<Size, int> _sizeCounter;
+        Dictionary<Color, int> _colorCounter;
+
         public SearchEngine(List<Shirt> shirts)
         {
             _hashedShirts = shirts
@@ -19,12 +22,11 @@ namespace ConstructionLine.CodingChallenge
         public SearchResults Search(SearchOptions options)
         {
             List<Shirt> resultShirts = new List<Shirt>();
-            Dictionary<Size, int> sizeCounter = InitSizeCounter();
-            Dictionary<Color, int> colorCounter = InitColorCounter();
+            _sizeCounter = InitSizeCounter();
+            _colorCounter = InitColorCounter();
 
             foreach (var color in (options.Colors.Count > 0 ? options.Colors : Color.All))
             {
-                int shirtsInTheColor = 0;
                 foreach (var size in (options.Sizes.Count > 0 ? options.Sizes : Size.All))
                 {
                     Dictionary<System.Guid, List<Shirt>> shirtsByColor;
@@ -34,23 +36,17 @@ namespace ConstructionLine.CodingChallenge
                         if (shirtsByColor.TryGetValue(size.Id, out filteredShirts))
                         {
                             resultShirts.AddRange(filteredShirts);
-                            shirtsInTheColor += filteredShirts.Count;
-
-                            sizeCounter.TryGetValue(size, out var currentSizeCount);
-                            sizeCounter[size] = currentSizeCount + filteredShirts.Count;
+                            UpdateCounters(color, size, filteredShirts.Count);
                         }
                     }
                 }
-
-                colorCounter.TryGetValue(color, out var currentColorCount);
-                colorCounter[color] = currentColorCount + shirtsInTheColor;
             }
 
             return new SearchResults
             {
                 Shirts = resultShirts,
-                ColorCounts = colorCounter.Select(x => new ColorCount() { Color = x.Key, Count = x.Value }).ToList(),
-                SizeCounts = sizeCounter.Select(x => new SizeCount() { Size = x.Key, Count = x.Value }).ToList()
+                ColorCounts = _colorCounter.Select(x => new ColorCount() { Color = x.Key, Count = x.Value }).ToList(),
+                SizeCounts = _sizeCounter.Select(x => new SizeCount() { Size = x.Key, Count = x.Value }).ToList()
             };
         }
 
@@ -72,6 +68,15 @@ namespace ConstructionLine.CodingChallenge
                 dicResult[color] = 0;
             }
             return dicResult;
+        }
+
+        private void UpdateCounters(Color color, Size size, int value)
+        {
+            _sizeCounter.TryGetValue(size, out var currentSizeCount);
+            _sizeCounter[size] = currentSizeCount + value;
+
+            _colorCounter.TryGetValue(color, out var currentColorCount);
+            _colorCounter[color] = currentColorCount + value;
         }
     }
 }
